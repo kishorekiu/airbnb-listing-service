@@ -41,11 +41,11 @@ app.get("/api/v1/listings", async (req, res) => {
     const cachedData = await redis.get(redisCacheKey);
 
     if (cachedData) {
-      console.log(`⚡ CACHE HIT for ${cacheKey}`);
+      console.log(`⚡ CACHE HIT for ${redisCacheKey}`);
       return res.status(200).json({ source: "redis", data: cachedData })
     }
 
-    console.log(`🐌 CACHE MISS for ${cacheKey} - Hitting MongoDB`);
+    console.log(`🐌 CACHE MISS for ${redisCacheKey} - Hitting MongoDB`);
 
     const skip = (page - 1) * limit;
     const listings = await Listing.find({})
