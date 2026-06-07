@@ -3,7 +3,6 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { Redis } from "@upstash/redis";
-import Listing from "./models/listing";
 import mongoose from "mongoose";
 
 dotenv.config();
@@ -16,6 +15,22 @@ const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN
 })
+
+const listingSchema = new mongoose.Schema({
+  title: String,
+  description: String,
+  imageSrc: [String],
+  createdAt: Date,
+  category: String,
+  roomCount: Number,
+  bathroomCount: Number,
+  guestCount: Number,
+  locationValue: String,
+  userId: String,
+  price: Number,
+}, { collection: 'listings' }); // Explicitly bind to your existing Next.js collection
+
+const Listing = mongoose.model('Listing', listingSchema);
 
 app.get("/api/v1/listings", async (req, res) => {
   try {
