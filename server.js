@@ -83,6 +83,46 @@ app.get("/api/v1/listings", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+// Get Single Listing by ID
+app.get('/api/v1/listings/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate the MongoDB ID format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid listing ID format" });
+    }
+
+    const cacheKey = `listing:id:${id}`;
+
+    // STEP A: Cache Check
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+      console.log(`⚡ CACHE HIT for ${cacheKey}`);
+      return res.status(200).json({ source: 'redis', data: cachedData });
+    }
+
+    console.log(`🐌 CACHE MISS for ${cacheKey} - Hitting MongoDB`);
+
+    // STEP B: Database Fallback
+    const listing = await Listing.findById(id).lean();
+
+    if (!listing) {
+      return res.status(404).json({ error: "Listing not found" });
+    }
+
+    // STEP C: Dual-Write (Cache for 1 hour, since details rarely change)
+    await redis.set(cacheKey, listing, { ex: 3600 });
+
+    res.status(200).json({ source: 'mongodb', data: listing });
+
+  } catch (error) {
+    console.error("Single Listing Fetch Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 const PORT = process.env.PORT || 8080;
 
 mongoose.connect(process.env.MONGODB_URI)
