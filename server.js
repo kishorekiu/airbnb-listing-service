@@ -17,8 +17,6 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN
 })
 
-const listingSchema
-
 app.get("/api/v1/listings", async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
