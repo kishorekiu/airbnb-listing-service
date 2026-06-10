@@ -39,7 +39,7 @@ app.get("/api/v1/listings", async (req, res) => {
     const { cursor, category } = req.query;
 
     // Create a unique cache key. If no cursor, it's the "initial" feed.
-    const cacheKey = cursor
+    let cacheKey = cursor
       ? `listings:cursor:${cursor}:limit:${limit}`
       : `listings:cursor:initial:limit:${limit}`;
 
