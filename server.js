@@ -36,12 +36,17 @@ const Listing = mongoose.model('Listing', listingSchema);
 app.get("/api/v1/listings", async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 12;
-    const cursor = req.query.cursor; // This will be undefined on the very first load
+    const { cursor, category } = req.query;
 
     // Create a unique cache key. If no cursor, it's the "initial" feed.
     const cacheKey = cursor
       ? `listings:cursor:${cursor}:limit:${limit}`
       : `listings:cursor:initial:limit:${limit}`;
+
+    // Append the category if it exists
+    if (category) {
+      cacheKey += `:category:${category}`;
+    }
 
     // STEP A: The Cache Check
     const cachedPayload = await redis.get(cacheKey);
@@ -56,9 +61,13 @@ app.get("/api/v1/listings", async (req, res) => {
 
     // STEP B: The Fallback (O(1) MongoDB Query)
     let query = {};
+    // If a category is passed in the URL, add it to the MongoDB query
+    if (category) {
+      query.category = category;
+    }
     if (cursor && cursor !== 'null') {
       // Find documents where the _id is Less Than ($lt) the cursor
-      query = { _id: { $lt: new mongoose.Types.ObjectId(cursor) } };
+      query._id = { $lt: new mongoose.Types.ObjectId(cursor) };
     }
 
     const listings = await Listing.find(query)
