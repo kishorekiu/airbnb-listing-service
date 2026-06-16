@@ -36,7 +36,9 @@ const Listing = mongoose.model('Listing', listingSchema);
 app.get("/api/v1/listings", async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 12;
-    const { cursor, category } = req.query;
+    const { cursor, category, locationValue, guestCount, startDate, endDate } = req.query;
+
+    const isGranularSearch = locationValue || guestCount || startDate;
 
     // Create a unique cache key. If no cursor, it's the "initial" feed.
     let cacheKey = cursor
@@ -49,12 +51,14 @@ app.get("/api/v1/listings", async (req, res) => {
     }
 
     // STEP A: The Cache Check
-    const cachedPayload = await redis.get(cacheKey);
+    if (!isGranularSearch) {
+      const cachedPayload = await redis.get(cacheKey);
 
-    if (cachedPayload) {
-      console.log(`⚡ CACHE HIT for ${cacheKey}`);
-      // Return the cached data, but tag the source as redis
-      return res.status(200).json({ source: 'redis', ...cachedPayload });
+      if (cachedPayload) {
+        console.log(`⚡ CACHE HIT for ${cacheKey}`);
+        // Return the cached data, but tag the source as redis
+        return res.status(200).json({ source: 'redis', ...cachedPayload });
+      }
     }
 
     console.log(`🐌 CACHE MISS for ${cacheKey} - Hitting MongoDB`);
@@ -62,9 +66,13 @@ app.get("/api/v1/listings", async (req, res) => {
     // STEP B: The Fallback (O(1) MongoDB Query)
     let query = {};
     // If a category is passed in the URL, add it to the MongoDB query
-    if (category) {
-      query.category = category;
-    }
+    if (category) query.category = category;
+
+    if (locationValue) query.locationValue = locationValue;
+
+    // If they want 4 guests, we need a property that holds $gte (Greater Than or Equal) to 4
+    if (guestCount) query.guestCount = { $gte: Number(guestCount) };
+
     if (cursor && cursor !== 'null') {
       // Find documents where the _id is Less Than ($lt) the cursor
       query._id = { $lt: new mongoose.Types.ObjectId(cursor) };
@@ -83,7 +91,8 @@ app.get("/api/v1/listings", async (req, res) => {
     const cacheData = { data: listings, nextCursor };
 
     // STEP C: Dual-Write to Redis (5 minute TTL)
-    await redis.set(cacheKey, cacheData, { ex: 300 });
+    if (!isGranularSearch)
+      await redis.set(cacheKey, cacheData, { ex: 300 });
 
     res.status(200).json({ source: 'mongodb', ...cacheData });
 
