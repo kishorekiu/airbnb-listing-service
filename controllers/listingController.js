@@ -88,7 +88,7 @@ export const getListingsFeed = async (req, res, next) => {
     // STEP F: Dual-Write
     if (!isGranularSearch) {
       // Background async save (don't force the user to wait for Redis to save)
-      redis.set(cacheKey, cacheData, { ex: 604800 }).catch(err =>
+      redis.set(cacheKey, cacheData, { ex: 86400 }).catch(err =>
         console.error(`⚠️ Redis Save Error: ${err?.message}`)
       );
     }
@@ -130,7 +130,7 @@ export const getListingById = async (req, res, next) => {
       return res.status(404).json({ error: "Listing not found" });
     }
 
-    redis.set(cacheKey, listing, { ex: 604800 }).catch(e => console.error("Redis save failed", e));
+    redis.set(cacheKey, listing, { ex: 86400 }).catch(e => console.error("Redis save failed", e));
 
     res.status(200).json({ source: 'mongodb', data: listing });
 
