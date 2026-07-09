@@ -120,7 +120,7 @@ export const getListingById = async (req, res, next) => {
     try {
       const cachedData = await redis.get(cacheKey);
       if (cachedData) return res.status(200).json({ source: 'redis', data: cachedData });
-    } catch (/** @type  */ redisErr) {
+    } catch (/** @type {any} */ redisErr) {
       console.error(`⚠️ Redis Error: ${redisErr?.message}`);
     }
 

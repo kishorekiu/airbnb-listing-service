@@ -17,6 +17,11 @@ app.use(express.json());
 // 2. Connect to Database
 connectDB();
 
+// 2.5.  Health check
+app.get("/api/v1/health", (/** @type {any} */ req, /** @type {any} */ res) => {
+  res.status(200).json({ status: "awake", message: "Server is ready." });
+});
+
 // 3. Mount Routes
 app.use("/api/v1/listings", listingRoutes);
 
